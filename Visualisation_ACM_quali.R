@@ -114,8 +114,10 @@ plot_quali_act <- function(res_mca,
                            vars = NULL,          
                            axes = c(1, 2),       
                            contrib = c(0, 0),
-                           legend = TRUE,        # <<< OPTION légende
-                           drop_na_modalities = TRUE) {
+                           legend = TRUE,
+                           drop_na_modalities = TRUE,
+                           fix_axes = TRUE       # <<< NOUVEL ARGUMENT
+                           ) {
   
   stopifnot(requireNamespace("ggplot2", quietly = TRUE),
             requireNamespace("ggrepel", quietly = TRUE))
@@ -158,8 +160,13 @@ plot_quali_act <- function(res_mca,
   
   ## --- 3. Ajouter contributions ----------------------------------------------
   contrib_mat <- as.data.frame(res_mca$var$contrib)
-  coord_act$contrib_x <- contrib_mat[coord_act$label, paste0("Dim ", axes[1])]
-  coord_act$contrib_y <- contrib_mat[coord_act$label, paste0("Dim ", axes[2])]
+  
+  ## Colonnes de contributions pour les axes choisis
+  xcol_contrib <- paste0("Dim ", axes[1])
+  ycol_contrib <- paste0("Dim ", axes[2])
+  
+  coord_act$contrib_x <- contrib_mat[coord_act$label, xcol_contrib]
+  coord_act$contrib_y <- contrib_mat[coord_act$label, ycol_contrib]
   
   ## --- 4. Filtre contribution -------------------------------------------------
   if (!(contrib[1] == 0 && contrib[2] == 0)) {
@@ -199,12 +206,30 @@ plot_quali_act <- function(res_mca,
   
   coord_act <- coord_act[!is.na(coord_act$x) & !is.na(coord_act$y), ]
   
+  ## --- 6bis. Calcul des limites globales des axes (NOUVEAU) ------------------
+  if (fix_axes) {
+    coord_all <- as.data.frame(res_mca$var$coord)
+    
+    all_x <- coord_all[[xcol]]
+    all_y <- coord_all[[ycol]]
+    
+    max_abs_x <- max(abs(all_x), na.rm = TRUE)
+    max_abs_y <- max(abs(all_y), na.rm = TRUE)
+    
+    # limites symétriques autour de 0
+    lim_x <- c(-max_abs_x, max_abs_x)
+    lim_y <- c(-max_abs_y, max_abs_y)
+  } else {
+    lim_x <- NULL
+    lim_y <- NULL
+  }
+  
   ## --- 7. Labels d’axes -------------------------------------------------------
   ev <- res_mca$eig
   lab_x <- paste0("Axe ", axes[1], " (", round(ev[axes[1], 2], 1), " %)")
   lab_y <- paste0("Axe ", axes[2], " (", round(ev[axes[2], 2], 1), " %)")
   
-  ## --- 8. Gestion des beaux labels pour la légende ----------------------------
+  ## --- 8. Gestion des labels de légende --------------------------------------
   if (!is.null(var_codes)) {
     map_codes_to_labels <- setNames(var_labels, var_codes)
     coord_act$var_plot <- unname(map_codes_to_labels[coord_act$var])
@@ -223,11 +248,9 @@ plot_quali_act <- function(res_mca,
     shape_scale <- scale_shape_manual(values = shapes_vec, name = "Variable active")
     
   } else {
-    # >>> NO LEGEND ⇒ REMOVE SHAPE AESTHETIC AND USE A SINGLE SHAPE (16)
-    
     aes_shape <- NULL
     shape_scale <- NULL
-    coord_act$var_plot <- NULL  # inutile sans légende
+    coord_act$var_plot <- NULL
   }
   
   ## --- 10. Plot ---------------------------------------------------------------
@@ -247,8 +270,15 @@ plot_quali_act <- function(res_mca,
                              colour = "black",
                              size = 3,
                              show.legend = FALSE,
-                             max.overlaps = Inf) +
-    coord_equal() +
+                             max.overlaps = Inf)
+  
+  if (fix_axes) {
+    p <- p + coord_equal(xlim = lim_x, ylim = lim_y)
+  } else {
+    p <- p + coord_equal()
+  }
+  
+  p <- p +
     labs(x = lab_x, y = lab_y) +
     theme_bw()
   
