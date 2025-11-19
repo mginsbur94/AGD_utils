@@ -1,121 +1,65 @@
-# Fonctions de visualisation pour l’ACM (MCA)
+# Fonctions de visualisation pour l’ACM (MCA) et pour la typologie HCPC
 
-Ce dépôt contient deux fonctions R destinées à produire facilement des graphiques lisibles des **modalités actives** et **supplémentaires** d’une analyse des correspondances multiples (**ACM / MCA**) réalisée avec `{FactoMineR}`.
+Ce dépôt fournit des fonctions R permettant de produire facilement des graphiques lisibles :
 
-Les deux fonctions utilisent **ggplot2** et **ggrepel**, afin d’éviter le chevauchement des labels et de fournir une représentation propre et interprétable.
+- des **modalités actives** et **supplémentaires** d’une analyse des correspondances multiples (**ACM / MCA**) réalisée avec `{FactoMineR}`,
+- de l’**évolution des inerties intra et inter** dans une classification hiérarchique sur composantes principales (**HCPC**).
+
+Les fonctions reposent sur **ggplot2** et **ggrepel** afin de :
+
+- éviter le chevauchement des labels,
+- fournir des visualisations propres, reproductibles et directement exploitables dans des rapports ou présentations.
 
 ---
 
-## Fonctions incluses
+## 📦 Fonctions incluses
 
 ### 🔹 `plot_quali_act()`
 
-Affiche les **modalités actives** d’un objet MCA, avec :
+Affiche les **modalités actives** d’un objet MCA (résultats principaux).
 
-* filtrage possible selon la **contribution aux axes**,
-* choix des axes à représenter,
-* option `legend = FALSE` si l’on souhaite un graphique épuré,
-* option `fix_axes = TRUE` (par défaut) qui empêche l’écrasement de l’un des axes si seules des modalités très proches de 0 sont affichées.
+Fonctionnalités :
+
+- filtrage selon la **contribution** aux axes (argument `contrib`),
+- choix des axes à représenter (`axes = c(1,2)`),
+- sélection d’un sous-ensemble de variables actives (`vars`),
+- option `legend = FALSE` pour un rendu épuré,
+- option `fix_axes = TRUE` (par défaut) imposant des limites d’axes symétriques pour éviter les graphiques « écrasés »,
+- suppression optionnelle des modalités `*.NA`.
 
 ---
 
 ### 🔹 `plot_quali_sup()`
 
-Affiche les **modalités qualitatives supplémentaires** (variables passées dans l’argument `quali.sup` de `MCA()`).
+Affiche les **modalités supplémentaires** d’un objet MCA (variables passées via `quali.sup`).
 
-Permet :
+Fonctionnalités :
 
-* la sélection de variables,
-* l’affichage de labels personnalisés dans la légende,
-* le retrait optionnel des modalités `*.NA`.
+- sélection de variables (`vars`), simple ou via un vecteur **nommé** pour afficher des labels personnalisés,
+- retrait optionnel des modalités `.NA`,
+- choix des axes (`axes = c(1,3)`),
+- légende automatique avec formes distinctes par variable supplémentaire.
 
 ---
 
-## Installation
+### 🔹 `plot_hcpc_inertia_ratios()`
 
-Cloner le dépôt puis sourcer le fichier :
+Affiche, pour un objet **HCPC**, les **rapports d’inertie intra et inter** en fonction du nombre de classes :
+
+- **Intra(k) / Intra(k−1)** (axe de gauche),
+- **Inter(k) / Inter(k−1)** (axe de droite),
+- mise à l’échelle automatique de la courbe inter,
+- double axe Y via `sec_axis`,
+- légende propre en bas.
+
+Ce graphique permet de **justifier le choix du nombre de classes** retenu par HCPC, en montrant les zones où les gains intra/inter sont les plus importants.
+
+---
+
+## 📥 Installation
+
+Cloner le dépôt puis sourcer les fonctions :
 
 ```r
 # install.packages(c("FactoMineR", "ggplot2", "ggrepel"))
-source("R/plots_acm.R")   # adapter au chemin réel
-```
-
-Les fonctions supposent un objet MCA construit avec `{FactoMineR}` :
-
-```r
-library(FactoMineR)
-res_mca <- MCA(donnees, quali.sup = c(5, 6))
-```
-
----
-
-## Exemple : `plot_quali_act()`
-
-```r
-plot_quali_act(
-  res_mca,
-  axes = c(1, 3),
-  contrib = c(Inf, 1),  # seuil de contribution sur l’axe 3
-  legend = FALSE,
-  fix_axes = TRUE       # évite l’écrasement des axes
-)
-```
-
-### Arguments principaux
-
-| Argument             | Description                                                    |
-| -------------------- | -------------------------------------------------------------- |
-| `res_mca`            | Objet MCA issu de `{FactoMineR}`                               |
-| `vars`               | Sélection des variables actives (codes seuls ou vecteur nommé) |
-| `axes`               | Axes à représenter (ex : `c(1,2)` )                            |
-| `contrib`            | Seuil de contribution (multiplicateur de la moyenne)           |
-| `legend`             | Affiche ou non la légende                                      |
-| `fix_axes`           | Fixe des limites cohérentes pour éviter les axes compressés    |
-| `drop_na_modalities` | Retire les modalités `*.NA`                                    |
-
----
-
-## Exemple : `plot_quali_sup()`
-
-```r
-plot_quali_sup(
-  res_mca,
-  vars = c("Diplôme"="DIPLOME", "Revenu total"="REVTOT_rec"),
-  axes = c(1, 3),
-  drop_na_modalities = TRUE
-)
-```
-
-### Arguments principaux
-
-| Argument             | Description                                                   |
-| -------------------- | ------------------------------------------------------------- |
-| `res_mca`            | Objet MCA                                                     |
-| `vars`               | Variables supplémentaires à afficher (codes ou vecteur nommé) |
-| `axes`               | Axes à représenter                                            |
-| `drop_na_modalities` | Supprime les modalités `.NA`                                  |
-| `legend`             | Gérée automatiquement selon le choix des shapes               |
-
----
-
-## Exemple complet d’utilisation
-
-```r
-library(FactoMineR)
-library(ggplot2)
-library(ggrepel)
-
-res_mca <- MCA(donnees, quali.sup = c(5, 6))
-
-# Modalités actives contribuant fortement aux axes 1 et 2
-plot_quali_act(res_mca, contrib = c(2, 2))
-
-# Modalités supplémentaires (diplôme et revenu) sur les axes 1 et 3
-plot_quali_sup(
-  res_mca,
-  vars = c("Diplôme"="DIPLOME", "Revenu total"="REVTOT_rec"),
-  axes = c(1, 3)
-)
-```
-
----
+source("https://raw.githubusercontent.com/mginsbur94/AGD_utils/main/Visualisation_ACM_quali.R")
