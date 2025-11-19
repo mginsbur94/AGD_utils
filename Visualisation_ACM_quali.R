@@ -286,3 +286,72 @@ plot_quali_act <- function(res_mca,
   
   return(p)
 }
+
+plot_hcpc_inertia_ratios <- function(hcpc_obj) {
+  library(ggplot2)
+
+  # --- Extraction des données HCPC ---
+  t      <- hcpc_obj$call$t
+  k_vals <- hcpc_obj$call$min : hcpc_obj$call$max
+
+  intra_all <- t$within
+  inert_tot <- intra_all[1]
+  inter_all <- inert_tot - intra_all
+
+  quot_intra <- t$quot
+  quot_inter_raw <- inter_all[k_vals] / inter_all[k_vals - 1]
+
+  # --- Mise à l’échelle de la courbe inter ---
+  min_intra <- min(quot_intra)
+  max_intra <- max(quot_intra)
+  min_inter <- min(quot_inter_raw)
+  max_inter <- max(quot_inter_raw)
+
+  scale_inter_to_intra <- function(x) {
+    (x - min_inter) / (max_inter - min_inter) * (max_intra - min_intra) + min_intra
+  }
+
+  quot_inter_scaled <- scale_inter_to_intra(quot_inter_raw)
+
+  # --- Construction du data frame ---
+  df <- data.frame(
+    k = k_vals,
+    quot_intra = quot_intra,
+    quot_inter_raw = quot_inter_raw,
+    quot_inter_sc = quot_inter_scaled
+  )
+
+  # --- Graphique ggplot2 ---
+  ggplot(df, aes(x = k)) +
+    geom_line(aes(y = quot_intra, linetype = "Intra"), linewidth = 0.8) +
+    geom_point(aes(y = quot_intra, shape = "Intra"), size = 2) +
+    geom_line(aes(y = quot_inter_sc, linetype = "Inter"), linewidth = 0.8) +
+    geom_point(aes(y = quot_inter_sc, shape = "Inter"), size = 2) +
+    scale_linetype_manual(
+      name = "",
+      values = c("Intra" = "solid", "Inter" = "dashed")
+    ) +
+    scale_shape_manual(
+      name = "",
+      values = c("Intra" = 16, "Inter" = 17)
+    ) +
+    scale_y_continuous(
+      name = "Intra(k) / Intra(k-1)",
+      limits = c(min_intra, max_intra),
+      sec.axis = sec_axis(
+        ~ (.-min_intra) * (max_inter - min_inter) / (max_intra - min_intra) + min_inter,
+        name = "Inter(k) / Inter(k-1)"
+      )
+    ) +
+    scale_x_continuous(breaks = k_vals) +
+    labs(
+      x = "Nombre de classes (k)",
+      title = "Évolution des rapports d'inertie intra et inter (HCPC)"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      legend.position = "bottom",
+      legend.box = "horizontal",
+      panel.grid.minor = element_blank()
+    )
+}
